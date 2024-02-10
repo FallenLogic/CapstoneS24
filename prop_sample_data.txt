@@ -1,0 +1,6 @@
+(table,desk,furniture)
+props_c17\furnituretable003a.mdl:{(1,1):0.8,(1,2):0.2}:0.33
+props_c17\furnituretable001a.mdl:{(1,1):0.8,(1,2):0.2}:0.33
+props_c17\furnituretable002a.mdl:{(1,1):0.8,(1,2):0.2}:0.33
+(chair)
+props_c17\chair001a.mdl:{(1,1):0.8,(1,2):0.2}:0.99
