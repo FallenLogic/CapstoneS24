@@ -4,23 +4,29 @@ from functools import partial
 import tkinter as tk
 from random import randint, uniform
 from tkinter import ttk, messagebox
-
+import subprocess
 import numpy
 
 from minimum_db import Relation
 
+MAX_SUPPORTED_SIZE = 32768  # constant
+
 Primitives = Enum('Primitives', ['ARCH', 'BLOCK', 'CYLINDER', 'SPHERE', 'SPIKE', 'TORUS', 'WEDGE'])
-out_file = "map.vmf"
 
 preps = ['in', 'on', 'by', 'next to']
-articles = ['the', 'a', 'an']
-nouns = ['house', 'room', 'table', 'chair']
+articles = ['the']
+nouns = ['house', 'room', 'table', 'chair', 'tree', 'bench']
 
 
-def clear_file():
+def clear_file(out_file):
     with open(out_file, 'w') as fout:
         fout.write('\n')
         fout.close()
+
+
+class MapSettings:
+    floor_material = "dev/dev_blendmeasure"
+    wall_material = "dev/dev_plasterwall001c"
 
 
 class ImageButton(ttk.Button):
@@ -59,8 +65,12 @@ def add_grid(parent, size):
     print(overall_grid)
 
 
+class OutFile:
+    out_file = "map.vmf"
+
+
 class Primitive:
-    def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z):
+    def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z, id):
         self.prim_type = prim_type
         self.loc_x = loc_x
         self.loc_y = loc_y
@@ -68,10 +78,110 @@ class Primitive:
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
+        self.id = id
 
-    def save_to_file(self):
+    def save_to_file(self, out_file):
         # TODO: implement writing to a map file
-        pass
+        with open(out_file, 'a') as fout:
+            fout.write("solid\n")
+            fout.write("{\n")
+            fout.write(r'"id" ' + '"{}"\n'.format(self.id))
+            x_plane_size = self.size_x / 2
+            texture = "tools/toolsnodraw"
+            for i in range(6):
+                face_id = i + 1
+                if face_id == (1 or 2 or 3 or 4):
+                    texture = MapSettings.wall_material
+                if face_id == 5:
+                    texture = MapSettings.floor_material
+                fout.write("side\n")
+                fout.write("{\n")
+                fout.write(r'"id"' + ' "{}"\n'.format(face_id))
+                # winding order matters, hardcoded
+                if face_id == 1:
+                    fout.write(
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} -{} {})"\n'.format(self.loc_x, x_plane_size,
+                                                                                         x_plane_size, self.loc_x + 2*x_plane_size,
+                                                                                         x_plane_size, x_plane_size,
+                                                                                         self.loc_x+2*x_plane_size, x_plane_size,
+                                                                                         x_plane_size))
+                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
+                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
+                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
+
+                if face_id == 2:
+                    fout.write(
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x, x_plane_size,
+                                                                                       x_plane_size,
+                                                                                       self.loc_x + x_plane_size,
+                                                                                       x_plane_size, x_plane_size,
+                                                                                       self.loc_x + x_plane_size,
+                                                                                       x_plane_size,
+                                                                                       x_plane_size))
+                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
+                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
+
+                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
+
+                # TODO: check y-axis
+                if face_id == 3:
+                    fout.write(
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x, x_plane_size,
+                                                                                           x_plane_size, self.loc_x,
+                                                                                           x_plane_size, x_plane_size,
+                                                                                           self.loc_x, x_plane_size,
+                                                                                           x_plane_size))
+                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
+                    fout.write(r'"uaxis" "[0 1 0 0] 0.25"' + "\n")
+                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
+
+                if face_id == 4:
+                    fout.write(
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x + 2*x_plane_size,
+                                                                                       x_plane_size,
+                                                                                       x_plane_size,
+                                                                                       self.loc_x + 2*x_plane_size,
+                                                                                       x_plane_size, x_plane_size,
+                                                                                       self.loc_x + 2*x_plane_size,
+                                                                                       x_plane_size,
+                                                                                       x_plane_size))
+                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
+                    fout.write(r'"uaxis" "[0 1 0 0] 0.25"' + "\n")
+                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
+                if face_id == 5:
+                    fout.write(
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x + 2*x_plane_size,
+                                                                                        x_plane_size,
+                                                                                        x_plane_size, x_plane_size,
+                                                                                        x_plane_size, x_plane_size,
+                                                                                        x_plane_size, x_plane_size,
+                                                                                        x_plane_size))
+                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
+                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
+                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
+                if face_id == 6:
+                    fout.write(
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x + 2*x_plane_size,
+                                                                                          x_plane_size,
+                                                                                          x_plane_size, x_plane_size,
+                                                                                          x_plane_size, x_plane_size,
+                                                                                          x_plane_size, x_plane_size,
+                                                                                          x_plane_size))
+                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
+                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
+                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
+
+                fout.write(r'"rotation" "0"' + "\n")
+                fout.write(r'"lightmapscale" "16"' + "\n")
+                fout.write(r'"smoothing_groups" "0"' + "\n")
+                fout.write("}\n")
+            fout.write("}\n")
+            fout.write("editor\n{\n")
+            fout.write(r'"color" "0 228 161"' + "\n")
+            fout.write(r'"visgroupshown" "1"' + "\n")
+            fout.write(r'"visgroupautoshown" "1"' + "\n")
+            fout.write('}\n')
+            fout.close()
 
 
 class Prop:
@@ -84,7 +194,7 @@ class Prop:
         self.is_physics = is_physics
         self.name = name
 
-    def save_to_file(self):
+    def save_to_file(self, out_file):
         # Change to append
         with open(out_file, 'a') as fout:
             fout.write("entity\n")
@@ -120,7 +230,7 @@ class Prop:
             for bp in boilerplate_ending_list:
                 fout.write("\t\t" + bp + "\n")
             fout.write("\t}\n")
-            fout.write("}")
+            fout.write("}\n")
             fout.close()
 
 
@@ -155,7 +265,7 @@ if __name__ == "__main__":
 
     window = tk.Tk()
     window.title("Capstone")
-    window.geometry("640x480")
+    window.geometry("800x500")
 
     frame = ttk.Frame(window)
     frame.columnconfigure(0, weight=1)
@@ -172,18 +282,30 @@ if __name__ == "__main__":
     temp_spinbox = ttk.Spinbox(frame, to=5, width=4)
     temp_spinbox.grid(column=1, row=2, sticky=tk.W, padx=5, pady=5)
 
+    grid_size_spinbox = ttk.Spinbox(frame, to=8, width=4)
+    grid_size_spinbox.grid(column=1, row=2, sticky=tk.N, padx=5, pady=5)
+
     geo_label = ttk.Label(frame, text="Geometry Painting:")
     geo_label.grid(column=1, row=3, sticky=tk.N, padx=5, pady=5)
 
     grid_frame = tk.Frame(frame)
     grid_frame.grid(column=1, row=4, sticky=tk.N)
 
-    grid_size = 7
+    theme_var = tk.StringVar()
+    theme_combobox = ttk.Combobox(frame, textvariable=theme_var)
+    theme_combobox['values'] = ('Urban', 'Natural', 'Sci-Fi')
+    theme_combobox['state'] = 'readonly'
+
+    theme_combobox.grid(column=2, row=2, sticky=tk.W, padx=5, pady=5)
+
+    grid_size = 8
+
+    map_grid_tile_size = MAX_SUPPORTED_SIZE / grid_size
 
     button_grid = []
 
 
-    def switch_tile_value(i, j):
+    def switch_tile_value(i, j):  # using numbers as booleans ("truthy" values in python)
         if true_grid[i][j] == 1:
             true_grid[i][j] = 0
         else:
@@ -202,6 +324,10 @@ if __name__ == "__main__":
 
 
     def generate():
+        if theme_combobox.get() == 'Urban':
+            MapSettings.floor_material = "concrete/concretefloor033k_c17"
+            MapSettings.wall_material = "building_template/building_template012h"
+
         if temp_spinbox.get() == '':
             messagebox.showwarning(title="Warning", message="Temperature not set. Using default")
             temp_spinbox.set(0)
@@ -211,48 +337,72 @@ if __name__ == "__main__":
             noun_index = randint(0, len(nouns) - 1)
             preps_index = randint(0, len(preps) - 1)
             noun_index_2 = randint(0, len(nouns) - 1)
-            rand_prompt = nouns[noun_index] + " " + preps[preps_index] + " " + nouns[noun_index_2]
+            rand_prompt = nouns[noun_index] + " " + preps[preps_index] + " " + articles[0] + " " + nouns[noun_index_2]
             input_text.insert(0, string=rand_prompt)
-        input_str = input_text.get()
+        input_str = input_text.get().lower()
         print(input_str)
+        with open("prompt_log.txt", 'a') as promptlog:
+            promptlog.write(input_str + "\n")
+
         temp = int(temp_spinbox.get())
 
-        prop_name = "models/error.mdl"
+        out_file = "maps/" + input_str + ".vmf"
+        clear_file(out_file)
 
+        with open(out_file, 'a') as fout:
+            fout.write("world\n{\n")
+            fout.close()
+
+        # TODO: generalize this (for word in db, if input_str contains word: prop_name_prob? )
         if input_str.__contains__("table"):
             prop_name = input_word_dict["table"]
         else:
             prop_name = input_word_dict["chair"]
 
         prop_list = []
+        geometry_list = []
         for i in range(grid_size):
             for j in range(grid_size):
                 if true_grid[i][j] == 1:
-                    test_prop = Prop(((i + j * (uniform(0, temp)) / 10) * 64), ((j + i * (uniform(0, temp)) / 10) * 64),
+                    # TODO: update to match chunk-based generation
+                    test_prop = Prop((((i + j * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
+                            MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
+                                     (((j + i * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
+                                             MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
                                      randint(0, 10 * temp), True, False, False,
                                      prop_name)
+                    test_cube = Primitive("BLOCK", 128, 0, 0, 128, 128, 128, i)
+                    test_cube.save_to_file(out_file)
+
+                    geometry_list.append(test_cube)
                     prop_list.append(test_prop)
+
         for prop in prop_list:
-            prop.save_to_file()
+            prop.save_to_file(out_file)
+
+        with open(out_file, 'a') as fout:
+            fout.write("}")
 
 
     gen_button = ttk.Button(frame, text="Generate", command=generate)
     gen_button.grid(column=2, row=1, sticky=tk.N, padx=5, pady=5)
 
-    open_button = ttk.Button(frame, text="Open Hammer")
+
+    def open_hammer():
+        subprocess.run(
+            r"C:\Program Files (x86)\Steam\steamapps\common\Source SDK Base 2013 Multiplayer\bin\hammerplusplus.exe")
+
+
+    open_button = ttk.Button(frame, text="Open Hammer", command=open_hammer)
     open_button.grid(column=3, row=1, sticky=tk.N, padx=5, pady=5)
 
     frame.pack()
+    true_grid = []
 
-    true_grid = [[0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0]]
-    # TODO: update to be dynamic
-
-    clear_file()
+    for i in range(grid_size):
+        row = []
+        for j in range(grid_size):
+            row.append(0)
+        true_grid.append(row)
 
     window.mainloop()
