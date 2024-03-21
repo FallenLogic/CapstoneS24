@@ -72,9 +72,9 @@ class OutFile:
 class Primitive:
     def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z, id):
         self.prim_type = prim_type
-        self.loc_x = loc_x
-        self.loc_y = loc_y
-        self.loc_z = loc_z
+        self.x = loc_x
+        self.y = loc_y
+        self.z = loc_z
         self.size_x = size_x
         self.size_y = size_y
         self.size_z = size_z
@@ -86,10 +86,10 @@ class Primitive:
             fout.write("solid\n")
             fout.write("{\n")
             fout.write(r'"id" ' + '"{}"\n'.format(self.id))
-            x_plane_size = self.size_x / 2
+            s = self.size_x
             texture = "tools/toolsnodraw"
-            for i in range(6):
-                face_id = i + 1
+            for k in range(6):
+                face_id = k + 1
                 if face_id == (1 or 2 or 3 or 4):
                     texture = MapSettings.wall_material
                 if face_id == 5:
@@ -100,24 +100,20 @@ class Primitive:
                 # winding order matters, hardcoded
                 if face_id == 1:
                     fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} -{} {})"\n'.format(self.loc_x, x_plane_size,
-                                                                                         x_plane_size, self.loc_x + 2*x_plane_size,
-                                                                                         x_plane_size, x_plane_size,
-                                                                                         self.loc_x+2*x_plane_size, x_plane_size,
-                                                                                         x_plane_size))
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
+                        format(self.x, self.y + s, self.z + s,
+                               self.x + s, self.y + s, self.z + s,
+                               self.x + s, self.y, self.z + s))
                     fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
                     fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
                     fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
 
                 if face_id == 2:
                     fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x, x_plane_size,
-                                                                                       x_plane_size,
-                                                                                       self.loc_x + x_plane_size,
-                                                                                       x_plane_size, x_plane_size,
-                                                                                       self.loc_x + x_plane_size,
-                                                                                       x_plane_size,
-                                                                                       x_plane_size))
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
+                        format(self.x, self.y, self.z,
+                               self.x + s, self.y, self.z,
+                               self.x + s, self.y + s, self.z))
                     fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
                     fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
 
@@ -126,47 +122,38 @@ class Primitive:
                 # TODO: check y-axis
                 if face_id == 3:
                     fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x, x_plane_size,
-                                                                                           x_plane_size, self.loc_x,
-                                                                                           x_plane_size, x_plane_size,
-                                                                                           self.loc_x, x_plane_size,
-                                                                                           x_plane_size))
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
+                        format(self.x, self.y + s, self.z + s,
+                               self.x, self.y, self.z + s,
+                               self.x, self.y, self.z))
                     fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
                     fout.write(r'"uaxis" "[0 1 0 0] 0.25"' + "\n")
                     fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
 
                 if face_id == 4:
                     fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x + 2*x_plane_size,
-                                                                                       x_plane_size,
-                                                                                       x_plane_size,
-                                                                                       self.loc_x + 2*x_plane_size,
-                                                                                       x_plane_size, x_plane_size,
-                                                                                       self.loc_x + 2*x_plane_size,
-                                                                                       x_plane_size,
-                                                                                       x_plane_size))
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
+                        format(self.x + s, self.y + s, self.z,
+                               self.x + s, self.y, self.z,
+                               self.x + s, self.y, self.z + s))
                     fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
                     fout.write(r'"uaxis" "[0 1 0 0] 0.25"' + "\n")
                     fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
                 if face_id == 5:
                     fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x + 2*x_plane_size,
-                                                                                        x_plane_size,
-                                                                                        x_plane_size, x_plane_size,
-                                                                                        x_plane_size, x_plane_size,
-                                                                                        x_plane_size, x_plane_size,
-                                                                                        x_plane_size))
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
+                        format(self.x + s, self.y + s, self.z + s,
+                               self.x, self.y + s, self.z + s,
+                               self.x, self.y + s, self.z))
                     fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
                     fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
                     fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
                 if face_id == 6:
                     fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.format(self.loc_x + 2*x_plane_size,
-                                                                                          x_plane_size,
-                                                                                          x_plane_size, x_plane_size,
-                                                                                          x_plane_size, x_plane_size,
-                                                                                          x_plane_size, x_plane_size,
-                                                                                          x_plane_size))
+                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
+                        format(self.x + s, self.y, self.z,
+                               self.x, self.y, self.z,
+                               self.x, self.y, self.z + s))
                     fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
                     fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
                     fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
@@ -371,7 +358,8 @@ if __name__ == "__main__":
                                              MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
                                      randint(0, 10 * temp), True, False, False,
                                      prop_name)
-                    test_cube = Primitive("BLOCK", 128, 0, 0, 128, 128, 128, i)
+                    size = 4096
+                    test_cube = Primitive("BLOCK", (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0, size, size, 1, i)
                     test_cube.save_to_file(out_file)
 
                     geometry_list.append(test_cube)
