@@ -5,8 +5,8 @@ import tkinter as tk
 from random import randint, uniform
 from tkinter import ttk, messagebox
 import subprocess
-import numpy
-
+import geometry
+import file_utils
 from minimum_db import Relation
 
 MAX_SUPPORTED_SIZE = 32768  # constant
@@ -18,16 +18,9 @@ articles = ['the']
 nouns = ['house', 'room', 'table', 'chair', 'tree', 'bench']
 
 
-def clear_file(out_file):
-    with open(out_file, 'w') as fout:
-        fout.write('\n')
-        fout.close()
 
 
-class MapSettings:
-    floor_material = "dev/dev_blendmeasure"
-    wall_material = "dev/dev_plasterwall001c"
-
+map_settings = geometry.MapSettings()
 
 class ImageButton(ttk.Button):
     # Adapted from: https://stackoverflow.com/questions/69167947/how-to-change-tkinter-button-image-on-click
@@ -64,163 +57,6 @@ def add_grid(parent, size):
     print(tile_grid)
     print(overall_grid)
 
-
-class OutFile:
-    out_file = "map.vmf"
-
-
-class Primitive:
-    def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z, id):
-        self.prim_type = prim_type
-        self.x = loc_x
-        self.y = loc_y
-        self.z = loc_z
-        self.size_x = size_x
-        self.size_y = size_y
-        self.size_z = size_z
-        self.id = id
-
-    def save_to_file(self, out_file):
-        # TODO: implement writing to a map file
-        with open(out_file, 'a') as fout:
-            fout.write("solid\n")
-            fout.write("{\n")
-            fout.write(r'"id" ' + '"{}"\n'.format(self.id))
-            s = self.size_x
-            texture = "tools/toolsnodraw"
-            for k in range(6):
-                face_id = k + 1
-                if face_id == (1 or 2 or 3 or 4):
-                    texture = MapSettings.wall_material
-                if face_id == 5:
-                    texture = MapSettings.floor_material
-                fout.write("side\n")
-                fout.write("{\n")
-                fout.write(r'"id"' + ' "{}"\n'.format(face_id))
-                # winding order matters, hardcoded
-                if face_id == 1:
-                    fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
-                        format(self.x, self.y + s, self.z + s,
-                               self.x + s, self.y + s, self.z + s,
-                               self.x + s, self.y, self.z + s))
-                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
-                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
-                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
-
-                if face_id == 2:
-                    fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
-                        format(self.x, self.y, self.z,
-                               self.x + s, self.y, self.z,
-                               self.x + s, self.y + s, self.z))
-                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
-                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
-
-                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
-
-                # TODO: check y-axis
-                if face_id == 3:
-                    fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
-                        format(self.x, self.y + s, self.z + s,
-                               self.x, self.y, self.z + s,
-                               self.x, self.y, self.z))
-                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
-                    fout.write(r'"uaxis" "[0 1 0 0] 0.25"' + "\n")
-                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
-
-                if face_id == 4:
-                    fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
-                        format(self.x + s, self.y + s, self.z,
-                               self.x + s, self.y, self.z,
-                               self.x + s, self.y, self.z + s))
-                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
-                    fout.write(r'"uaxis" "[0 1 0 0] 0.25"' + "\n")
-                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
-                if face_id == 5:
-                    fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
-                        format(self.x + s, self.y + s, self.z + s,
-                               self.x, self.y + s, self.z + s,
-                               self.x, self.y + s, self.z))
-                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
-                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
-                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
-                if face_id == 6:
-                    fout.write(
-                        r'"plane"' + ' "({} {} {}) ({} {} {}) ({} {} {})"\n'.
-                        format(self.x + s, self.y, self.z,
-                               self.x, self.y, self.z,
-                               self.x, self.y, self.z + s))
-                    fout.write(r'"material" ' + '"{}"'.format(texture) + "\n")
-                    fout.write(r'"uaxis" "[1 0 0 0] 0.25"' + "\n")
-                    fout.write(r'"vaxis" "[0 0 -1 0] 0.25"' + "\n")
-
-                fout.write(r'"rotation" "0"' + "\n")
-                fout.write(r'"lightmapscale" "16"' + "\n")
-                fout.write(r'"smoothing_groups" "0"' + "\n")
-                fout.write("}\n")
-            fout.write("}\n")
-            fout.write("editor\n{\n")
-            fout.write(r'"color" "0 228 161"' + "\n")
-            fout.write(r'"visgroupshown" "1"' + "\n")
-            fout.write(r'"visgroupautoshown" "1"' + "\n")
-            fout.write('}\n')
-            fout.close()
-
-
-class Prop:
-    def __init__(self, loc_x, loc_y, loc_z, is_static, is_dynamic, is_physics, name):
-        self.loc_x = loc_x
-        self.loc_y = loc_y
-        self.loc_z = loc_z
-        self.is_static = is_static
-        self.is_dynamic = is_dynamic
-        self.is_physics = is_physics
-        self.name = name
-
-    def save_to_file(self, out_file):
-        # Change to append
-        with open(out_file, 'a') as fout:
-            fout.write("entity\n")
-            fout.write("{\n")
-            fout.write("\t" + r'"id" "2"' + "\n")
-            if self.is_static:
-                fout.write("\t" + r'"classname" "prop_static"' + "\n")
-            if self.is_physics:
-                fout.write("\t" + r'"classname" "prop_physics"' + "\n")
-            if self.is_dynamic:
-                fout.write("\t" + r'"classname" "prop_dynamic"' + "\n")
-            boilerplate_list = [r'"angles" "0 0 0"', r'"disableselfshadowing" "0"', r'"disableshadows" "0"',
-                                r'"disablevertexlighting" "0"',
-                                r'"fademaxdist" "0"', r'"fademindist" "-1"', r'"fadescale" "1"',
-                                r'"generatelightmaps" "0"', r'"ignorenormals" "0"',
-                                r'"lightmapresolutionx" "32"', r'"lightmapresolutiony" "32"', r'"maxdxlevel" "0"',
-                                r'"mindxlevel" "0"']
-            for bp in boilerplate_list:
-                fout.write("\t" + bp + "\n")
-            fout.write("\t" + r'"model" "' + self.name + "\"\n")
-
-            settings_list = [r'"screenspacefade" "0"', r'"skin" "0"', r'"solid" "6"']
-            for setting in settings_list:
-                fout.write("\t" + setting + "\n")
-            fout.write("\t" + r'"origin" ')
-            fout.write("\"{} {} {}\"\n".format(self.loc_x, self.loc_y, self.loc_z))
-
-            fout.write('\teditor\n')
-            fout.write('\t{\n')
-
-            boilerplate_ending_list = [r'"color" "255 255 0"', r'"visgroupshown" "1"',
-                                       r'"visgroupautoshown" "1"', r'"logicalpos" "[0 0]"']
-            for bp in boilerplate_ending_list:
-                fout.write("\t\t" + bp + "\n")
-            fout.write("\t}\n")
-            fout.write("}\n")
-            fout.close()
-
-
 def load_props(filename):
     with open(filename) as fin:
         for line in fin:
@@ -241,10 +77,10 @@ if __name__ == "__main__":
 
     load_props(prop_path)
 
-    table_relation = Relation(("table", "desk", "stand"), 0.8, "props_c17\\furnituretable003a.mdl")
-    table_relation.save_relation()
+    #table_relation = Relation(("table", "desk", "stand"), 0.8, "props_c17\\furnituretable003a.mdl")
+    #table_relation.save_relation()
 
-    table_relation.print_string()
+    #table_relation.print_string()
 
     input_word_dict = {'chair': 'models/props_c17/furniturechair001a.mdl',
                        'table': 'models/props_c17/furnituretable001a.mdl'}
@@ -303,7 +139,7 @@ if __name__ == "__main__":
         row = []
         for j in range(grid_size):
             command = partial(switch_tile_value, i, j)
-            f1 = ImageButton(grid_frame, image1="res/handpaintedwall1.png", image2="res/handpaintedwall2.png",
+            f1 = ImageButton(grid_frame, image1="res/empty2.png", image2="res/handpaintedwall2.png",
                              command=command)
             f1.grid(column=1 + i, row=4 + j)
             row.append(f1)
@@ -312,8 +148,11 @@ if __name__ == "__main__":
 
     def generate():
         if theme_combobox.get() == 'Urban':
-            MapSettings.floor_material = "concrete/concretefloor033k_c17"
-            MapSettings.wall_material = "building_template/building_template012h"
+            map_settings.floor_material = "concrete/concretefloor033k_c17"
+            map_settings.wall_material = "building_template/building_template012h"
+        if theme_combobox.get() == 'Natural':
+            map_settings.floor_material = "nature/blendgrassgravel003a"
+            map_settings.wall_material = "nature/blendcliffgrass001a"
 
         if temp_spinbox.get() == '':
             messagebox.showwarning(title="Warning", message="Temperature not set. Using default")
@@ -334,7 +173,7 @@ if __name__ == "__main__":
         temp = int(temp_spinbox.get())
 
         out_file = "maps/" + input_str + ".vmf"
-        clear_file(out_file)
+        file_utils.clear_file(out_file)
 
         with open(out_file, 'a') as fout:
             fout.write("world\n{\n")
@@ -352,22 +191,20 @@ if __name__ == "__main__":
             for j in range(grid_size):
                 if true_grid[i][j] == 1:
                     # TODO: update to match chunk-based generation
-                    test_prop = Prop((((i + j * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
+                    test_prop = geometry.Prop((((i + j * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
                             MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
                                      (((j + i * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
                                              MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
                                      randint(0, 10 * temp), True, False, False,
                                      prop_name)
+                    test_prop.save_to_file(out_file)
                     size = 4096
-                    test_cube = Primitive("BLOCK", (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0, size, size, 1, i)
+                    test_cube = geometry.Primitive("BLOCK", (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2),
+                                          (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0, size, size, size, i)
                     test_cube.save_to_file(out_file)
 
                     geometry_list.append(test_cube)
                     prop_list.append(test_prop)
-
-        for prop in prop_list:
-            prop.save_to_file(out_file)
-
         with open(out_file, 'a') as fout:
             fout.write("}")
 
