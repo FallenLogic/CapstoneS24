@@ -5,9 +5,12 @@ import tkinter as tk
 from random import randint, uniform
 from tkinter import ttk, messagebox
 import subprocess
+from timeit import default_timer as timer
+
+# my code
 import geometry
 import file_utils
-from minimum_db import Relation
+import minimum_db
 
 MAX_SUPPORTED_SIZE = 32768  # constant
 
@@ -19,12 +22,18 @@ nouns = ['house', 'room', 'table', 'chair', 'tree', 'bench']
 
 should_write_prefabs = True
 should_write_props = True
-should_write_geometry = True
+should_write_primitives = True
 
-map_settings = geometry.MapSettings()
 
-calculated_time = 0.0
+class MapSettings:
+    # defaults for geometry
+    floor_material = "dev/dev_blendmeasure"
+    wall_material = "dev/dev_plasterwall001c"
 
+
+map_settings = MapSettings()
+
+default_padding = 5
 
 class ImageButton(ttk.Button):
     # Adapted from: https://stackoverflow.com/questions/69167947/how-to-change-tkinter-button-image-on-click
@@ -47,7 +56,9 @@ class ImageButton(ttk.Button):
 def load_last_prompt():
     with open('prompt_log.txt', 'r') as fin:
         last_prompt = fin.readlines()[-1]
-        input_text.insert(0, last_prompt[:-1])  # [:-1 cuts \n out]
+        if not last_prompt == "":
+            input_text.delete(0, 'end')
+            input_text.insert(0, last_prompt[:-1])  # [:-1 cuts \n out]
 
 
 def load_props(filename):
@@ -89,20 +100,22 @@ if __name__ == "__main__":
     dev_settings = ttk.Frame(notebook)
 
     label = ttk.Label(frame, text="Prompt:")
-    label.grid(column=0, row=1, sticky=tk.N, padx=5, pady=5)
+    label.grid(column=0, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     input_text = ttk.Entry(frame, width=26)
-    input_text.grid(column=1, row=1, sticky=tk.N, padx=5, pady=5)
+    input_text.grid(column=1, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
-    temp_label = ttk.Label(frame, text="Temperature (1-5):")
-    temp_label.grid(column=0, row=2, sticky=tk.N, padx=5, pady=5)
+    temp_label = ttk.Label(frame, text="Temperature (0-5):")
+    temp_label.grid(column=0, row=2, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     temp_spinbox = ttk.Spinbox(frame, to=5, width=4)
-    temp_spinbox.grid(column=1, row=2, sticky=tk.W, padx=5, pady=5)
+    temp_spinbox.grid(column=1, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
+    temp_spinbox.insert(0,'0')
 
     grid_var = tk.IntVar()
     grid_size_spinbox = ttk.Spinbox(frame, to=8, width=4, textvariable=grid_var)
-    grid_size_spinbox.grid(column=1, row=2, sticky=tk.N, padx=5, pady=5)
+    grid_size_spinbox.grid(column=1, row=2, sticky=tk.N, padx=default_padding, pady=default_padding)
+    grid_size_spinbox.set(8)
 
     grid_frame = tk.Frame(frame)
     grid_frame.grid(column=1, row=4, sticky=tk.N)
@@ -112,7 +125,7 @@ if __name__ == "__main__":
     theme_combobox['values'] = ('Urban', 'Natural', 'Sci-Fi')
     theme_combobox['state'] = 'readonly'
 
-    theme_combobox.grid(column=2, row=2, sticky=tk.W, padx=5, pady=5)
+    theme_combobox.grid(column=2, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
 
     grid_size = 8
 
@@ -126,7 +139,7 @@ if __name__ == "__main__":
             true_grid[i][j] = 1
 
 
-    map_grid_tile_size = MAX_SUPPORTED_SIZE / 8
+    map_grid_tile_size = MAX_SUPPORTED_SIZE / 8 #TODO: data from spinbox
 
 
     def add_grid():
@@ -145,24 +158,27 @@ if __name__ == "__main__":
 
 
     geo_button = ttk.Button(frame, text="Do Geometry Painting", command=add_grid)
-    geo_button.grid(column=1, row=3, sticky=tk.N, padx=5, pady=5)
-
+    geo_button.grid(column=1, row=3, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     def generate():
+        start = timer()
         if theme_combobox.get() == 'Urban':
             map_settings.floor_material = "concrete/concretefloor033k_c17"
             map_settings.wall_material = "building_template/building_template012h"
         if theme_combobox.get() == 'Natural':
             map_settings.floor_material = "nature/blendgrassgravel003a"
             map_settings.wall_material = "nature/blendcliffgrass001a"
+        if theme_combobox.get() == 'Sci-Fi':
+            map_settings.floor_material = "metal/metalfloor003a"
+            map_settings.wall_material = "metal/citadel_metalwall077a"
 
         prevalidation_temperature = temp_spinbox.get()
-        if prevalidation_temperature == '' or (
+        if prevalidation_temperature == '' or not prevalidation_temperature.isdigit() or (
                 int(prevalidation_temperature) < 0 or int(prevalidation_temperature) > 5):
-            messagebox.showwarning(title="Warning", message="Temperature not set. Using default")
+            messagebox.showwarning(title="Warning", message="Temperature not set or invalid temperature. Using default")
             temp_spinbox.set(0)
-        if input_text.get() == '':
-            messagebox.showwarning(title="Warning", message="No prompt input. Using random")
+        if input_text.get() == '': # tkinter text input usually handles other edge cases (typing \/, os.open, etc)
+            messagebox.showwarning(title="Warning", message="No prompt input or invalid input. Using random.")
 
             noun_index = randint(0, len(nouns) - 1)
             preps_index = randint(0, len(preps) - 1)
@@ -175,7 +191,7 @@ if __name__ == "__main__":
         with open("prompt_log.txt", 'a') as promptlog:
             promptlog.write(input_str + "\n")
 
-        temp = int(temp_spinbox.get())
+        temperature_val = int(temp_spinbox.get())
 
         out_file = "maps/" + input_str + ".vmf"
         file_utils.clear_file(out_file)
@@ -192,53 +208,68 @@ if __name__ == "__main__":
 
         prop_list = []
         geometry_list = []
-        size = 4096
+        #size = 4096
         height = 2
         # default values
         left, right, below, above = 0, 0, 0, 0
         for i in range(grid_size):
             for j in range(grid_size):
                 if true_grid[i][j] == 1:
-                    if i + 1 < grid_size:
-                        right = true_grid[i + 1][j]
-                    if j > 0:
-                        left = true_grid[i - 1][j]
                     if j + 1 < grid_size:
-                        below = true_grid[i][j + 1]
-                    if j > 0:
-                        above = true_grid[i][j - 1]
-                    #checks if on the outside
-                    if not left or not right or not below or not above:
-                        height = 4096
+                        right = true_grid[i][j + 1]
+                    if i > 0:
+                        left = true_grid[i][j - 1]
+                    if i + 1 < grid_size:
+                        below = true_grid[i + 1][j]
+                    if i > 0:
+                        above = true_grid[i - 1][j]
+                    # checks if on the outside
+                    if not (left and right and below and above):
+                        height = map_grid_tile_size
                     else:
                         height = 2
                     # TODO: update to match chunk-based generation
-                    test_prop = geometry.Prop((((i + j * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
-                            MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
-                                              (((j + i * (uniform(0, temp)) / 10) * map_grid_tile_size) - (
-                                                      MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2)),
-                                              randint(size, size + 10 * temp), True, False, False,
-                                              prop_name)
+                    if height == 2:
+                        prop_x = (((i + j * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
+                                MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
+                        prop_y = (((j + i * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
+                                                          MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
+                        prop_z = 22 # TODO: fix magic number
+                        test_prop = geometry.Prop(prop_x,
+                                                  prop_y,
+                                                  prop_z, True, False, False,
+                                                  prop_name)
+                        prop_list.append(test_prop)
+
                     test_cube = geometry.Primitive("BLOCK", (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2),
-                                                   (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0, size, size,
-                                                   height, i)
+                                                   (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0, map_grid_tile_size, map_grid_tile_size,
+                                                   height, i, map_settings.floor_material, map_settings.wall_material)
 
                     geometry_list.append(test_cube)
-                    prop_list.append(test_prop)
-        for prop in prop_list:
-            prop.save_to_file(out_file)
-        for brush in geometry_list:
-            brush.save_to_file(out_file)
-        file_utils.append_file_to_file("prefabs/big_skybox.vmf", out_file)
-        with open(out_file, 'a') as fout:
-            fout.write("}")
 
+        if should_write_primitives:
+            for brush in geometry_list:
+                brush.save_to_file(out_file)
+        if should_write_prefabs:
+            file_utils.append_file_to_file("prefabs/big_skybox.vmf", out_file) #TODO: update to scale
+            if input_str.__contains__("house"):
+                file_utils.append_file_to_file("prefabs/prefab_house_1.vmf",out_file)
+        if should_write_props:
+            with open(out_file, 'a') as fout:
+                fout.write("}")
+            for prop in prop_list:
+                prop.save_to_file(out_file)
+        end = timer()
 
+        overall_time = end-start
+        map_settings.ttc = overall_time
+        print("Time to completion: " + str(overall_time)) #TODO: integrate into GUI
+        calculated_time_label['text'] = str(overall_time) + "s"
     gen_button = ttk.Button(frame, text="Generate", command=generate)
-    gen_button.grid(column=2, row=1, sticky=tk.N, padx=5, pady=5)
+    gen_button.grid(column=2, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     llp_button = ttk.Button(frame, text="Load last prompt", command=load_last_prompt)
-    llp_button.grid(column=3, row=2, sticky=tk.N, padx=5, pady=5)
+    llp_button.grid(column=3, row=2, sticky=tk.N, padx=default_padding, pady=default_padding)
 
 
     def open_hammer():
@@ -247,7 +278,7 @@ if __name__ == "__main__":
 
 
     open_button = ttk.Button(frame, text="Open Hammer", command=open_hammer)
-    open_button.grid(column=3, row=1, sticky=tk.N, padx=5, pady=5)
+    open_button.grid(column=3, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     frame.pack()
     true_grid = []
@@ -261,13 +292,34 @@ if __name__ == "__main__":
     # TODO: dev insights stuff below here
 
     gen_time_label = ttk.Label(dev_settings, text="Average generation time for this session: ")
-    gen_time_label.grid(column=0, row=0, sticky=tk.N, padx=5, pady=5)
+    gen_time_label.grid(column=0, row=0, sticky=tk.N, padx=default_padding, pady=default_padding)
 
-    calculated_time_label = ttk.Label(dev_settings, text=str(calculated_time) + "s")
+    calculated_time_label = ttk.Label(dev_settings, text="0.0s")
     # TODO: calculated_time should reset on generate try tk.FloatVar()
-    calculated_time_label.grid(column=1, row=0, sticky=tk.N, padx=5, pady=5)
+    calculated_time_label.grid(column=1, row=0, sticky=tk.N, padx=default_padding, pady=default_padding)
+
+    enable_props = ttk.Label(dev_settings, text="Use Props")
+    enable_props.grid(column=0, row=1, sticky=tk.W, padx=default_padding, pady=default_padding)
+
+    enable_props_button = ttk.Checkbutton(dev_settings)
+    enable_props_button.grid(column=1, row=1, sticky=tk.W, padx=default_padding, pady=default_padding)
+    # button
+
+    enable_prims = ttk.Label(dev_settings, text="Use Primitives")
+    enable_prims.grid(column=0, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
+
+    enable_prims_button = ttk.Checkbutton(dev_settings)
+    enable_prims_button.grid(column=1, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
+    # button
+
+    enable_prefabs = ttk.Label(dev_settings, text="Use Prefabs")
+    enable_prefabs.grid(column=0, row=3, sticky=tk.W, padx=default_padding, pady=default_padding)
+
+    enable_prefabs_button = ttk.Checkbutton(dev_settings)
+    enable_prefabs_button.grid(column=1, row=3, sticky=tk.W, padx=default_padding, pady=default_padding)
+    # button
 
     notebook.add(frame, text="Prompt & General Settings")
     notebook.add(dev_settings, text="Developer Insights/Settings")
-    notebook.pack(padx=5, pady=5, expand=True, fill='both')
+    notebook.pack(padx=default_padding, pady=default_padding, expand=True, fill='both')
     window.mainloop()
