@@ -1,9 +1,7 @@
-class MapSettings:
-    floor_material = "dev/dev_blendmeasure"
-    wall_material = "dev/dev_plasterwall001c"
+import capstone
 
 class Primitive:
-    def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z, id):
+    def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z, id, floor_texture, wall_texture):
         self.prim_type = prim_type
         self.x = loc_x
         self.y = loc_y
@@ -12,6 +10,8 @@ class Primitive:
         self.size_y = size_y
         self.size_z = size_z
         self.id = id
+        self.floor_texture = floor_texture
+        self.wall_texture = wall_texture
 
     def save_to_file(self, out_file):
         # TODO: implement writing to a map file
@@ -25,9 +25,9 @@ class Primitive:
             for k in range(6):
                 face_id = k + 1
                 if face_id == 1:
-                    texture = MapSettings.floor_material
+                    texture = self.floor_texture
                 else:
-                    texture = MapSettings.wall_material
+                    texture = self.wall_texture
                 fout.write("side\n")
                 fout.write("{\n")
                 fout.write(r'"id"' + ' "{}"\n'.format(face_id))
