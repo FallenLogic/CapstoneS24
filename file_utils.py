@@ -3,7 +3,8 @@ def clear_file(out_file):
         fout.write('\n')
         fout.close()
 
-def append_file_to_file(in_file, out_file):
+
+def write_prefab_to_file(in_file, out_file):
     data = []
     with open(in_file, 'r') as fin:
         for line in fin:
