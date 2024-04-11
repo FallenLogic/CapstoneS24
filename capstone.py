@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from enum import Enum
 from functools import partial
 import tkinter as tk
@@ -69,18 +70,26 @@ class ImageButton(ttk.Button):
             if self.toggleState == 5:
                 self.config(image=self.height5Image)
 
+
 def load_last_prompt():
     with open('prompt_log.txt', 'r') as fin:
-        last_prompt = fin.readlines()[-1]
-        if not last_prompt == "":
-            input_text.delete(0, 'end')
-            input_text.insert(0, last_prompt[:-1])  # [:-1 cuts \n out]
+        file_data = fin.readlines()
+        if len(file_data) > 0:
+            last_prompt = file_data[-1]
+            if not last_prompt == "":
+                input_text.delete(0, 'end')
+                input_text.insert(0, last_prompt[:-1])  # [:-1 cuts \n out]
 
 
 class Timing:
     average_time = 0
     average_time_count = 0
 
+
+grid_settings_column = 3
+theme_label_column = 4
+generate_column = 5
+file_column = 6
 
 if __name__ == "__main__":
     prop_path = "prop_sample_data.txt"
@@ -98,7 +107,7 @@ if __name__ == "__main__":
 
     window = tk.Tk()
     window.title("Capstone")
-    window.geometry("800x640")
+    window.geometry("960x640")
 
     notebook = ttk.Notebook(window)
 
@@ -118,27 +127,45 @@ if __name__ == "__main__":
     temp_spinbox.grid(column=1, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
     temp_spinbox.insert(0, '0')
 
+    grid_label = ttk.Label(frame, text="Grid Size: ")
+    grid_label.grid(column=2, row=1, sticky=tk.E)
+
     grid_var = tk.IntVar()
     grid_size_spinbox = ttk.Spinbox(frame, to=13, width=4, textvariable=grid_var)
-    grid_size_spinbox.grid(column=1, row=2, sticky=tk.N, padx=default_padding, pady=default_padding)
+    grid_size_spinbox.grid(column=grid_settings_column, row=1, sticky=tk.W, padx=default_padding, pady=default_padding)
     grid_size_spinbox.set(10)
+
+    theme_label = ttk.Label(frame, text="Theme: ")
+    theme_label.grid(column=2, row=2, sticky=tk.E)
 
     grid_frame = tk.Frame(frame)
     grid_frame.grid(column=1, row=4, sticky=tk.N)
 
-    theme_var = tk.StringVar()
-    theme_combobox = ttk.Combobox(frame, textvariable=theme_var)
-    theme_combobox['values'] = ('Urban', 'Natural', 'Sci-Fi')
+    # theme_var = tk.StringVar()
+    theme_combobox = ttk.Combobox(frame)
+    theme_combobox['values'] = ('Default', 'Urban', 'Natural', 'Sci-Fi')
+    theme_combobox.set('Default')
     theme_combobox['state'] = 'readonly'
 
-    theme_combobox.grid(column=2, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
+    theme_combobox.grid(column=3, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
 
     button_grid = []
 
 
     def add_grid():
-        geo_button['state'] = 'enabled'
-        gui_grid_size = grid_var.get()
+        geo_button['state'] = 'disabled'
+        gen_button['state'] = 'enabled'
+        gui_grid_size = 8
+        if grid_size_spinbox.get().isdigit():
+            if 13 >= int(grid_size_spinbox.get()) >= 2:
+                gui_grid_size = grid_var.get()
+            else:
+                grid_size_spinbox.delete(0, "end")
+                grid_size_spinbox.insert(0, str(gui_grid_size))
+        else:
+            grid_size_spinbox.delete(0, "end")
+            grid_size_spinbox.insert(0, str(gui_grid_size))
+        grid_size_spinbox['state'] = 'disabled'
         for gui_i in range(gui_grid_size):
             gui_row = []
             for gui_j in range(gui_grid_size):
@@ -151,22 +178,41 @@ if __name__ == "__main__":
             button_grid.append(gui_row)
 
 
-    geo_button = ttk.Button(frame, text="Do Geometry Painting", command=add_grid)
+    geo_button = ttk.Button(frame, text="Create Grid for Editing", command=add_grid)
     geo_button.grid(column=1, row=3, sticky=tk.N, padx=default_padding, pady=default_padding)
+
+    map_grid = []
+
+    # generates a max size grid, if any numbers are put in they will be below this.
+    for i in range(13):
+        row = []
+        for j in range(13):
+            row.append(0)
+        map_grid.append(row)
 
 
     def update_tile_value(i, j):  # using numbers as booleans later ("truthy" values in python), kind of hacky
-        if true_grid[i][j] == 5:  # 1 = floor, 2 = grid tile height, 3 = 2*grid tile height, 4 = 3*grid tile height, 5=4*grid_tile_height
-            true_grid[i][j] = 0
+        print(map_grid)
+        if map_grid[i][
+            j] == 5:  # 1 = floor, 2 = grid tile height, 3 = 2*grid tile height, 4 = 3*grid tile height, 5=4*grid_tile_height
+            map_grid[i][j] = 0
         else:
-            true_grid[i][j] += 1
-        print(true_grid[i][j])
+            map_grid[i][j] += 1
+        print(map_grid[i][j])
 
 
     def generate():
-        gen_grid_size = grid_var.get()
+        gen_grid_size = 8
+        floor_height = 2
+        if grid_size_spinbox.get().isdigit():
+            if 13 >= int(grid_size_spinbox.get()) >= 2:
+                gen_grid_size = grid_var.get()
+
         map_grid_tile_size = MAX_SUPPORTED_SIZE / gen_grid_size
         start = timer()
+        if theme_combobox.get() == 'default':
+            map_settings.floor_material = "dev/dev_blendmeasure"
+            map_settings.wall_material = "dev/dev_plasterwall001c"
         if theme_combobox.get() == 'Urban':
             map_settings.floor_material = "concrete/concretefloor033k_c17"
             map_settings.wall_material = "building_template/building_template012h"
@@ -198,7 +244,23 @@ if __name__ == "__main__":
 
         temperature_val = int(temp_spinbox.get())
 
-        out_file = "maps/" + input_str + ".vmf"
+        # Windows filesystems don't support these characters
+        forbidden_characters = ('<', '>', ':', '"', '/', '|', '?', '*', '.', '\\')
+        for char in forbidden_characters:
+            input_str = input_str.replace(char, '_')
+
+        #date always appended so irrelevant
+        # forbidden_filenames = ("CON", "PRN", "AUX", "NUL",
+        #                        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        #                        "COM9",
+        #                        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9")
+        #
+        # if input_str in forbidden_filenames:
+        #     input_str = "____"
+
+        now = datetime.now()
+        date_time = now.strftime("%m%d%Y%H%M%S")
+        out_file = "maps/" + input_str + date_time + ".vmf"
         file_utils.clear_file(out_file)
 
         with open(out_file, 'a') as fout:
@@ -206,23 +268,26 @@ if __name__ == "__main__":
             fout.close()
 
         # TODO: generalize this (for word in db, if input_str contains word: prop_name_prob? )
+        prop_name = ""
         if input_str.__contains__("table"):
             prop_name = input_word_dict["table"]
-        else:
+        if input_str.__contains__("chair"):
             prop_name = input_word_dict["chair"]
 
         prop_list = []
         geometry_list = []
 
+        print(map_grid)
+
         for i in range(gen_grid_size):
             for j in range(gen_grid_size):
-                if true_grid[i][j] > 0:
+                if map_grid[i][j] > 0:
                     # TODO: update to match chunk-based generation
-                    if true_grid[i][j] == 1:
-                        height = 2
+                    if map_grid[i][j] == 1:
+                        height = floor_height
                     else:
-                        height = true_grid[i][j] * map_grid_tile_size
-                    if height == 2:
+                        height = (map_grid[i][j] - 1) * (map_grid_tile_size / 2)
+                    if height == floor_height:
                         prop_x = (((i + j * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
                                 MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
                         prop_y = (((j + i * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
@@ -236,9 +301,10 @@ if __name__ == "__main__":
                             prop_list.append(test_prop)
 
                     test_primitive = geometry.Primitive("BLOCK", (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2),
-                                                   (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0,
-                                                   map_grid_tile_size, map_grid_tile_size,
-                                                   height, i, map_settings.floor_material, map_settings.wall_material)
+                                                        (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0,
+                                                        map_grid_tile_size, map_grid_tile_size,
+                                                        height, i, map_settings.floor_material,
+                                                        map_settings.wall_material)
                     geometry_list.append(test_primitive)
 
         if enable_prims_button.instate(['selected']) or enable_prims_button.instate(['alternate']):
@@ -246,9 +312,9 @@ if __name__ == "__main__":
                 brush.save_to_file(out_file)
         if enable_prefabs_button.instate(['selected']) or enable_prefabs_button.instate(['alternate']):
             if should_write_prefabs:
-                file_utils.append_file_to_file("prefabs/big_skybox.vmf", out_file)  # TODO: update to scale
+                file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)  # TODO: update to scale
                 if input_str.__contains__("house"):  # TODO: generalize
-                    file_utils.append_file_to_file("prefabs/prefab_house_1.vmf", out_file)
+                    file_utils.write_prefab_to_file("prefabs/prefab_house_1.vmf", out_file)
         with open(out_file, 'a') as fout:
             fout.write("}")
         if enable_props_button.instate(['selected']) or enable_props_button.instate(['alternate']):
@@ -262,12 +328,12 @@ if __name__ == "__main__":
         calculated_time_label['text'] = str(Timing.average_time / Timing.average_time_count) + "s"
 
 
-    gen_button = ttk.Button(frame, text="Generate", command=generate)
-    gen_button['state'] = 'disabled' #TODO: check
-    gen_button.grid(column=2, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
+    gen_button = ttk.Button(frame, text="GENERATE MAP", command=generate)
+    gen_button['state'] = 'disabled'  # TODO: check
+    gen_button.grid(column=generate_column, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     llp_button = ttk.Button(frame, text="Load last prompt", command=load_last_prompt)
-    llp_button.grid(column=3, row=2, sticky=tk.N, padx=default_padding, pady=default_padding)
+    llp_button.grid(column=generate_column, row=2, sticky=tk.N, padx=default_padding, pady=default_padding)
 
 
     def open_hammer():
@@ -276,16 +342,9 @@ if __name__ == "__main__":
 
 
     open_button = ttk.Button(frame, text="Open Hammer", command=open_hammer)
-    open_button.grid(column=3, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
+    open_button.grid(column=file_column, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     frame.pack()
-    true_grid = []
-
-    for i in range(grid_var.get()):
-        row = []
-        for j in range(grid_var.get()):
-            row.append(0)
-        true_grid.append(row)
 
     # TODO: dev insights stuff below here
 
