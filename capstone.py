@@ -276,14 +276,13 @@ if __name__ == "__main__":
 
         prop_list = []
         geometry_list = []
-
-        print(map_grid)
-
+        floor_count = 0
         for i in range(gen_grid_size):
             for j in range(gen_grid_size):
                 if map_grid[i][j] > 0:
                     # TODO: update to match chunk-based generation
                     if map_grid[i][j] == 1:
+                        floor_count += 1
                         height = floor_height
                     else:
                         height = (map_grid[i][j] - 1) * (map_grid_tile_size / 2)
@@ -306,20 +305,30 @@ if __name__ == "__main__":
                                                         height, i, map_settings.floor_material,
                                                         map_settings.wall_material)
                     geometry_list.append(test_primitive)
+        if floor_count == 0:
+            messagebox.showwarning(title="Warning",
+                                   message="None of your tiles are floor. There is nowhere to place props or other geometry.")
 
         if enable_prims_button.instate(['selected']) or enable_prims_button.instate(['alternate']):
             for brush in geometry_list:
                 brush.save_to_file(out_file)
         if enable_prefabs_button.instate(['selected']) or enable_prefabs_button.instate(['alternate']):
             if should_write_prefabs:
-                file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)  # TODO: update to scale
-                if input_str.__contains__("house"):  # TODO: generalize
-                    file_utils.write_prefab_to_file("prefabs/prefab_house_1.vmf", out_file)
+                if floor_count > 0:
+                    file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)  # TODO: update to scale
+                    if input_str.__contains__("house"):  # TODO: generalize
+                        file_utils.write_prefab_to_file("prefabs/prefab_house_1.vmf", out_file)
         with open(out_file, 'a') as fout:
             fout.write("}")
+
         if enable_props_button.instate(['selected']) or enable_props_button.instate(['alternate']):
-            for prop in prop_list:
-                prop.save_to_file(out_file)
+            if floor_count > 0:
+                for prop in prop_list:
+                    prop.save_to_file(out_file)
+
+
+
+
         end = timer()
         Timing.average_time_count += 1
         Timing.average_time += (end - start)
@@ -329,7 +338,7 @@ if __name__ == "__main__":
 
 
     gen_button = ttk.Button(frame, text="GENERATE MAP", command=generate)
-    gen_button['state'] = 'disabled'  # TODO: check
+    gen_button['state'] = 'disabled'
     gen_button.grid(column=generate_column, row=1, sticky=tk.N, padx=default_padding, pady=default_padding)
 
     llp_button = ttk.Button(frame, text="Load last prompt", command=load_last_prompt)
