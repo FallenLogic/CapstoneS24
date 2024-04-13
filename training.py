@@ -149,15 +149,15 @@ def load_props(input_word):
                 else:
                     continue
 
+def train():
+    # iterate steps from stackoverflow
+    training_folders = [x[0] for x in os.walk("training")]
 
-# iterate steps from stackoverflow
-training_folders = [x[0] for x in os.walk("training")]
+    file_utils.clear_file(loc_association_training_filename)
+    file_utils.clear_file(word_association_training_filename)
 
-file_utils.clear_file(loc_association_training_filename)
-file_utils.clear_file(word_association_training_filename)
+    for folder_index in range(1, len(training_folders)):
+        folder = training_folders[folder_index]
+        train_prop_statistics(folder)
 
-for folder_index in range(1, len(training_folders)):
-    folder = training_folders[folder_index]
-    train_prop_statistics(folder)
-
-load_props("kitchen")
+    load_props("room")
