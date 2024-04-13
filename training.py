@@ -1,3 +1,4 @@
+import math
 import os
 import random
 
@@ -9,12 +10,13 @@ loc_association_training_filename = "res/loc_association_training_results.txt"
 
 def train_prop_statistics(input_word):
     props_list = []
-    # prop_locations_list = []
 
     prop_locations_dict = {}
 
     total_props = 0
+    total_maps = 0
     for entry in os.scandir(input_word):
+        total_maps += 1
         print(entry.name)
         with open(entry, 'r') as vmf:
             data = vmf.readlines()
@@ -23,11 +25,17 @@ def train_prop_statistics(input_word):
                 if line.__contains__("prop_static") or line.__contains__("prop_dynamic") or line.__contains__(
                         "prop_physics"):
                     total_props += 1
+                    prop_name = data[line_index + 14].strip().split()[1][1:-1]
                     print(data[line_index], data[line_index + 14], data[line_index + 18])
-                    props_list.append(
-                        data[line_index + 14].strip().split()[1][1:-1])  # adds props' model names to the list
-                    prop_locations_dict[data[line_index + 14].strip().split()[1][1:-1]] = \
-                    data[line_index + 18].strip().split('"')[3]
+                    props_list.append(prop_name)  # adds props' model names to the list
+                    # for prop in props_list:
+                    #     prop_locations_dict[prop] = []  # creates an empty list for multivalued results
+                    prop_locations_dict[prop_name] = []
+            for line_index in range(len(data)):
+                line = data[line_index]
+                if line.__contains__("prop_static") or line.__contains__("prop_dynamic") or line.__contains__(
+                        "prop_physics"):
+                    prop_locations_dict[prop_name].append(data[line_index + 18].strip().split('" "')[1][:-1])
     # print(total_props)
     print(props_list)
     print(prop_locations_dict)
@@ -46,50 +54,56 @@ def train_prop_statistics(input_word):
         weights.append(prop_probabilities[item])
 
     # TODO: allow duplicates
-    loc_counts = dict()
-    for i in prop_locations_dict:
-        loc_counts[i] = loc_counts.get(i, 0) + 1
-
-    loc_items = []
-    loc_weights = []
-    loc_prop_probabilities = {}
-    for loc_item in loc_counts:
-        loc_prop_probabilities[loc_item] = loc_counts[loc_item] / total_props
-        loc_items.append(loc_item)
-        loc_weights.append(loc_prop_probabilities[loc_item])
 
     print(items)
     # print(weights)
 
-    print(loc_items)
-    # print(loc_weights)
+    for prop in prop_locations_dict:
+        print(prop)
+        print(prop_locations_dict[prop])
 
     print(random.choices(population=items, weights=weights, k=10))  # shows a random sampling from the distribution
+
+    prop_avg_count = math.floor(total_props / total_maps)
 
     with open(word_association_training_filename, 'a') as fout:
         fout.write("{\n")
         for i in range(len(items)):
             data = items[i] + ":" + str(weights[i])
             fout.write(data + "\n")
-        fout.write(input_word.split('\\')[1] + "\n")  # gets the folder name
+        fout.write(input_word.split('\\')[1] + ":" + str(prop_avg_count) + "\n")  # gets the folder name
         fout.write("}\n")
 
     with open(loc_association_training_filename, 'a') as fout2:
         fout2.write("{\n")
-        print("len1", len(items))
-        print("len2", len(loc_items))
-
-        for i in range(len(loc_items)):
-            data = loc_items[i] + ":" + items[i] + ":" + str(loc_weights[i])  # TODO: store associated name
-            fout2.write(data + "\n")
+        for prop in prop_locations_dict:
+            fout2.write(prop + ":")
+            for i in range(len(prop_locations_dict[prop])):
+                if i == 0:
+                    fout2.write(prop_locations_dict[prop][i])
+                else:
+                    fout2.write("," + prop_locations_dict[prop][i])
+            fout2.write("\n")
         fout2.write(input_word.split('\\')[1] + "\n")  # gets the folder name
         fout2.write("}\n")
+
+
+def load_props(input_word):
+    with open(word_association_training_filename, 'r') as fin:
+        data = fin.readlines()
+        for i in range(len(data)):
+            line = data[i]
+            print(line)
 
 
 # iterate steps from stackoverflow
 training_folders = [x[0] for x in os.walk("training")]
 
+file_utils.clear_file(loc_association_training_filename)
 file_utils.clear_file(word_association_training_filename)
+
 for folder_index in range(1, len(training_folders)):
     folder = training_folders[folder_index]
     train_prop_statistics(folder)
+
+load_props("kitchen")
