@@ -1,8 +1,10 @@
 import math
 import os
 import random
+import numpy as np
 
 import file_utils
+import geometry
 
 word_association_training_filename = "res/word_association_training_results.txt"
 loc_association_training_filename = "res/loc_association_training_results.txt"
@@ -17,7 +19,7 @@ def train_prop_statistics(input_word):
     total_maps = 0
     for entry in os.scandir(input_word):
         total_maps += 1
-        print(entry.name)
+        #print(entry.name)
         with open(entry, 'r') as vmf:
             data = vmf.readlines()
             for line_index in range(len(data)):
@@ -26,7 +28,7 @@ def train_prop_statistics(input_word):
                         "prop_physics"):
                     total_props += 1
                     prop_name = data[line_index + 14].strip().split()[1][1:-1]
-                    #print(data[line_index], data[line_index + 14], data[line_index + 18])
+                    # print(data[line_index], data[line_index + 14], data[line_index + 18])
                     props_list.append(prop_name)  # adds props' model names to the list
                     # for prop in props_list:
                     #     prop_locations_dict[prop] = []  # creates an empty list for multivalued results
@@ -37,8 +39,8 @@ def train_prop_statistics(input_word):
                         "prop_physics"):
                     prop_locations_dict[prop_name].append(data[line_index + 18].strip().split('" "')[1][:-1])
     # print(total_props)
-    #print(props_list)
-    #print(prop_locations_dict)
+    # print(props_list)
+    # print(prop_locations_dict)
 
     counts = dict()
     for i in props_list:
@@ -53,9 +55,7 @@ def train_prop_statistics(input_word):
         items.append(item)
         weights.append(prop_probabilities[item])
 
-    # TODO: allow duplicates
-
-    #print(items)
+    # print(items)
     # print(weights)
     #
     # for prop in prop_locations_dict:
@@ -79,17 +79,35 @@ def train_prop_statistics(input_word):
         for prop in prop_locations_dict:
             fout2.write(prop + ":")
             for i in range(len(prop_locations_dict[prop])):
-                if i == 0:
-                    fout2.write(prop_locations_dict[prop][i])
-                else:
-                    fout2.write("," + prop_locations_dict[prop][i])
+                fout2.write(prop_locations_dict[prop][i] + ",")
             fout2.write("\n")
         fout2.write(input_word.split('\\')[1] + "\n")  # gets the folder name
         fout2.write("}\n")
 
 
 def load_props(input_word):
-    final_prop_list = []
+    with open(loc_association_training_filename, 'r') as loc_in:
+        loc_data = loc_in.readlines()
+        for i in range(len(loc_data)):
+            line = loc_data[i]
+            if line.startswith("{"):
+                props_loc_dict = {}
+                continue
+            if line.__contains__(":"):
+                prop_and_locations = line.split(":")
+                locations = prop_and_locations[-1].strip().split(",")
+                prop_name = prop_and_locations[0]
+                print(locations)
+                print(prop_and_locations)
+                props_loc_dict[prop_name] = locations
+                # props_list.pop()
+                # probs_list.pop()
+            if line.startswith("}"):
+                word = loc_data[i - 1].split(":")[0].strip()
+                print("WORD:", word)
+                if word == input_word:
+                    print("CORRECT DATA LOADED")
+                    break
     with open(word_association_training_filename, 'r') as fin:
         data = fin.readlines()
         for i in range(len(data)):
@@ -98,24 +116,32 @@ def load_props(input_word):
                 props_list = []
                 probs_list = []
                 continue
-            if line.startswith("}"):
-                word = data[i - 1].split(":")[0].strip()
-                print("WORD:", word)
-                if word == input_word:
-                    print("CORRECT DATA LOADED")
-                    print("WEIGHTED CHOICES:",random.choices(population=props_list[:-1], weights=probs_list[:-1], k=int(probs_list[-1])))
-                    print(props_list[:-1])
-                    print(probs_list[:-1])
-                    break
-                else:
-                    continue
             if line.__contains__(":"):
                 word_and_prob = line.split(":")
-                #print(word_and_prob)
+                # print(word_and_prob)
                 props_list.append(word_and_prob[0])
                 probs_list.append(float(word_and_prob[-1].strip()))
                 # props_list.pop()
                 # probs_list.pop()
+            if line.startswith("}"):
+                word = data[i - 1].split(":")[0].strip()
+                print("WORD:", word)
+                if word == input_word:
+                    rng = np.random.default_rng()
+                    print("CORRECT DATA LOADED")
+                    choices = random.choices(population=props_list[:-1], weights=probs_list[:-1], k=int(probs_list[-1]))
+                    print("WEIGHTED CHOICES:", choices)
+                    for item in choices:
+                        location = rng.choice(len(props_loc_dict[item]),1, replace=False)
+                        print(location)
+                        prop = geometry.Prop((i + 32) * 32, (i + 32) * 32, (i + 32) * 32, True, False, False, item)
+                        prop.save_to_file("map_test.vmf")
+                    # print(props_list[:-1])
+                    # print(probs_list[:-1])
+                    break
+                else:
+                    continue
+
 
 # iterate steps from stackoverflow
 training_folders = [x[0] for x in os.walk("training")]
