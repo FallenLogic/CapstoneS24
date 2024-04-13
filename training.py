@@ -19,7 +19,7 @@ def train_prop_statistics(input_word):
     total_maps = 0
     for entry in os.scandir(input_word):
         total_maps += 1
-        #print(entry.name)
+        # print(entry.name)
         with open(entry, 'r') as vmf:
             data = vmf.readlines()
             for line_index in range(len(data)):
@@ -33,6 +33,7 @@ def train_prop_statistics(input_word):
                     # for prop in props_list:
                     #     prop_locations_dict[prop] = []  # creates an empty list for multivalued results
                     prop_locations_dict[prop_name] = []
+                    prop_locations_dict[prop_name].append(data[line_index + 18].strip().split('" "')[1][:-1])
             for line_index in range(len(data)):
                 line = data[line_index]
                 if line.__contains__("prop_static") or line.__contains__("prop_dynamic") or line.__contains__(
@@ -132,9 +133,15 @@ def load_props(input_word):
                     choices = random.choices(population=props_list[:-1], weights=probs_list[:-1], k=int(probs_list[-1]))
                     print("WEIGHTED CHOICES:", choices)
                     for item in choices:
-                        location = rng.choice(len(props_loc_dict[item]),1, replace=False)
+                        print(props_loc_dict[item])
+                        location = rng.choice(props_loc_dict[item][:-1], 1, replace=False)
+                        new_loc_data = location[0].split(' ')
+
+                        x = float(new_loc_data[0])
+                        y = float(new_loc_data[1])
+                        z = float(new_loc_data[2])
                         print(location)
-                        prop = geometry.Prop((i + 32) * 32, (i + 32) * 32, (i + 32) * 32, True, False, False, item)
+                        prop = geometry.Prop(x, y, z, True, False, False, item)
                         prop.save_to_file("map_test.vmf")
                     # print(props_list[:-1])
                     # print(probs_list[:-1])
