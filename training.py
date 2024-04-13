@@ -26,7 +26,7 @@ def train_prop_statistics(input_word):
                         "prop_physics"):
                     total_props += 1
                     prop_name = data[line_index + 14].strip().split()[1][1:-1]
-                    print(data[line_index], data[line_index + 14], data[line_index + 18])
+                    #print(data[line_index], data[line_index + 14], data[line_index + 18])
                     props_list.append(prop_name)  # adds props' model names to the list
                     # for prop in props_list:
                     #     prop_locations_dict[prop] = []  # creates an empty list for multivalued results
@@ -37,8 +37,8 @@ def train_prop_statistics(input_word):
                         "prop_physics"):
                     prop_locations_dict[prop_name].append(data[line_index + 18].strip().split('" "')[1][:-1])
     # print(total_props)
-    print(props_list)
-    print(prop_locations_dict)
+    #print(props_list)
+    #print(prop_locations_dict)
 
     counts = dict()
     for i in props_list:
@@ -55,12 +55,12 @@ def train_prop_statistics(input_word):
 
     # TODO: allow duplicates
 
-    print(items)
+    #print(items)
     # print(weights)
-
-    for prop in prop_locations_dict:
-        print(prop)
-        print(prop_locations_dict[prop])
+    #
+    # for prop in prop_locations_dict:
+    #     print(prop)
+    #     print(prop_locations_dict[prop])
 
     print(random.choices(population=items, weights=weights, k=10))  # shows a random sampling from the distribution
 
@@ -89,12 +89,33 @@ def train_prop_statistics(input_word):
 
 
 def load_props(input_word):
+    final_prop_list = []
     with open(word_association_training_filename, 'r') as fin:
         data = fin.readlines()
         for i in range(len(data)):
             line = data[i]
-            print(line)
-
+            if line.startswith("{"):
+                props_list = []
+                probs_list = []
+                continue
+            if line.startswith("}"):
+                word = data[i - 1].split(":")[0].strip()
+                print("WORD:", word)
+                if word == input_word:
+                    print("CORRECT DATA LOADED")
+                    print("WEIGHTED CHOICES:",random.choices(population=props_list[:-1], weights=probs_list[:-1], k=int(probs_list[-1])))
+                    print(props_list[:-1])
+                    print(probs_list[:-1])
+                    break
+                else:
+                    continue
+            if line.__contains__(":"):
+                word_and_prob = line.split(":")
+                #print(word_and_prob)
+                props_list.append(word_and_prob[0])
+                probs_list.append(float(word_and_prob[-1].strip()))
+                # props_list.pop()
+                # probs_list.pop()
 
 # iterate steps from stackoverflow
 training_folders = [x[0] for x in os.walk("training")]
