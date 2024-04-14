@@ -86,7 +86,8 @@ def train_prop_statistics(input_word):
         fout2.write("}\n")
 
 
-def load_props(input_word):
+def load_props(input_word, prop_x, prop_y, map_input): # TODO: add x y z
+    list_of_props = []
     with open(loc_association_training_filename, 'r') as loc_in:
         loc_data = loc_in.readlines()
         for i in range(len(loc_data)):
@@ -110,6 +111,7 @@ def load_props(input_word):
                     print("CORRECT DATA LOADED")
                     break
     with open(word_association_training_filename, 'r') as fin:
+        used_locations = []
         data = fin.readlines()
         for i in range(len(data)):
             line = data[i]
@@ -136,19 +138,24 @@ def load_props(input_word):
                         print(props_loc_dict[item])
                         location = rng.choice(props_loc_dict[item][:-1], 1, replace=False)
                         new_loc_data = location[0].split(' ')
-
-                        x = float(new_loc_data[0])
-                        y = float(new_loc_data[1])
+                        if new_loc_data in used_locations:
+                            coords = rng.integers(0, 4096, 2, "int", True)
+                            new_loc_data = [coords[0] + prop_x, coords[1] + prop_y, 22]
+                        x = float(new_loc_data[0]) + prop_x
+                        y = float(new_loc_data[1]) + prop_y
                         z = float(new_loc_data[2])
+
                         print(location)
                         prop = geometry.Prop(x, y, z, True, False, False, item)
-                        prop.save_to_file("map_test.vmf")
+                        list_of_props.append(prop)
+                        used_locations.append(new_loc_data)
                     # print(props_list[:-1])
                     # print(probs_list[:-1])
                     break
                 else:
                     continue
-
+    print("LIST LEN:",len(list_of_props))
+    return list_of_props
 def train():
     # iterate steps from stackoverflow
     training_folders = [x[0] for x in os.walk("training")]
@@ -160,4 +167,6 @@ def train():
         folder = training_folders[folder_index]
         train_prop_statistics(folder)
 
-    load_props("room")
+    # load_props("room")
+
+#train()
