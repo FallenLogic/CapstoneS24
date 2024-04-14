@@ -11,7 +11,8 @@ from timeit import default_timer as timer
 # my code
 import geometry
 import file_utils
-import minimum_db
+import language_processing
+import training
 
 MAX_SUPPORTED_SIZE = 32768  # constant
 
@@ -249,7 +250,7 @@ if __name__ == "__main__":
         for char in forbidden_characters:
             input_str = input_str.replace(char, '_')
 
-        #date always appended so irrelevant
+        # date always appended so irrelevant
         # forbidden_filenames = ("CON", "PRN", "AUX", "NUL",
         #                        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
         #                        "COM9",
@@ -268,11 +269,11 @@ if __name__ == "__main__":
             fout.close()
 
         # TODO: generalize this (for word in db, if input_str contains word: prop_name_prob? )
-        prop_name = ""
-        if input_str.__contains__("table"):
-            prop_name = input_word_dict["table"]
-        if input_str.__contains__("chair"):
-            prop_name = input_word_dict["chair"]
+        # prop_name = ""
+        # if input_str.__contains__("table"):
+        #     prop_name = input_word_dict["table"]
+        # if input_str.__contains__("chair"):
+        #     prop_name = input_word_dict["chair"]
 
         prop_list = []
         geometry_list = []
@@ -284,27 +285,22 @@ if __name__ == "__main__":
                     if map_grid[i][j] == 1:
                         floor_count += 1
                         height = floor_height
-                    else:
-                        height = (map_grid[i][j] - 1) * (map_grid_tile_size / 2)
-                    if height == floor_height:
                         prop_x = (((i + j * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
                                 MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
                         prop_y = (((j + i * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
                                 MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
-                        prop_z = 22  # TODO: fix magic number
-                        for prop_num in range(10):  # TODO: fix this magic number too
-                            test_prop = geometry.Prop(prop_x + prop_num * 48,
-                                                      prop_y + randint(0, temperature_val * prop_num * 32),
-                                                      prop_z, True, False, False,
-                                                      prop_name)
-                            prop_list.append(test_prop)
-
-                    test_primitive = geometry.Primitive("BLOCK", (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2),
-                                                        (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0,
-                                                        map_grid_tile_size, map_grid_tile_size,
-                                                        height, i, map_settings.floor_material,
-                                                        map_settings.wall_material)
-                    geometry_list.append(test_primitive)
+                        for item in language_processing.process_prompt(input_str, prop_x, prop_y, out_file):
+                            print("SELECTED:", item.name)
+                            prop_list.append(item)
+                    else:
+                        height = (map_grid[i][j] - 1) * (map_grid_tile_size / 2)
+                    user_defined_primitive = geometry.Primitive("BLOCK",
+                                                                (i * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2),
+                                                                (j * map_grid_tile_size - MAX_SUPPORTED_SIZE / 2), 0,
+                                                                map_grid_tile_size, map_grid_tile_size,
+                                                                height, i, map_settings.floor_material,
+                                                                map_settings.wall_material)
+                    geometry_list.append(user_defined_primitive)
         if floor_count == 0:
             messagebox.showwarning(title="Warning",
                                    message="None of your tiles are floor. There is nowhere to place props or other geometry.")
@@ -316,18 +312,13 @@ if __name__ == "__main__":
             if should_write_prefabs:
                 if floor_count > 0:
                     file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)  # TODO: update to scale
-                    if input_str.__contains__("house"):  # TODO: generalize
+                    if input_str.__contains__("house"):  # TODO: generalize: check for existing prefabs
                         file_utils.write_prefab_to_file("prefabs/prefab_house_1.vmf", out_file)
         with open(out_file, 'a') as fout:
             fout.write("}")
-
         if enable_props_button.instate(['selected']) or enable_props_button.instate(['alternate']):
-            if floor_count > 0:
-                for prop in prop_list:
-                    prop.save_to_file(out_file)
-
-
-
+            for prop in prop_list:
+                prop.save_to_file(out_file)
 
         end = timer()
         Timing.average_time_count += 1
@@ -383,6 +374,10 @@ if __name__ == "__main__":
 
     enable_prefabs_button = ttk.Checkbutton(dev_settings)
     enable_prefabs_button.grid(column=1, row=3, sticky=tk.W, padx=default_padding, pady=default_padding)
+
+    training_button = ttk.Button(dev_settings, text="TRAIN MODEL", command=training.train)
+    training_button.grid(column=2, row=3, sticky=tk.W, padx=default_padding, pady=default_padding)
+
     # button
 
     notebook.add(frame, text="Prompt & General Settings")
