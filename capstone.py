@@ -71,6 +71,14 @@ class ImageButton(ttk.Button):
             if self.toggleState == 5:
                 self.config(image=self.height5Image)
 
+def bg_load_last_prompt():
+        with open('prompt_log.txt', 'r') as fin:
+            file_data = fin.readlines()
+            if len(file_data) > 0:
+                last_prompt = file_data[-1]
+                if not last_prompt == "":
+                    return last_prompt
+
 
 def load_last_prompt():
     with open('prompt_log.txt', 'r') as fin:
@@ -215,7 +223,7 @@ if __name__ == "__main__":
             map_settings.floor_material = "dev/dev_blendmeasure"
             map_settings.wall_material = "dev/dev_plasterwall001c"
         if theme_combobox.get() == 'Urban':
-            map_settings.floor_material = "concrete/concretefloor033k_c17"
+            map_settings.floor_material = "concrete/concretefloor033o"
             map_settings.wall_material = "building_template/building_template012h"
         if theme_combobox.get() == 'Natural':
             map_settings.floor_material = "nature/blendgrassgravel003a"
@@ -261,7 +269,7 @@ if __name__ == "__main__":
 
         now = datetime.now()
         date_time = now.strftime("%m%d%Y%H%M%S")
-        out_file = "maps/" + input_str + date_time + ".vmf"
+        out_file = "maps/" + input_str[:10] + date_time + ".vmf"
         file_utils.clear_file(out_file)
 
         with open(out_file, 'a') as fout:
@@ -278,10 +286,13 @@ if __name__ == "__main__":
         prop_list = []
         geometry_list = []
         floor_count = 0
+        max_height_count = 0
         for i in range(gen_grid_size):
             for j in range(gen_grid_size):
                 if map_grid[i][j] > 0:
                     # TODO: update to match chunk-based generation
+                    if map_grid[i][j] >= 3:
+                        max_height_count += 1
                     if map_grid[i][j] == 1:
                         floor_count += 1
                         height = floor_height
@@ -311,7 +322,10 @@ if __name__ == "__main__":
         if enable_prefabs_button.instate(['selected']) or enable_prefabs_button.instate(['alternate']):
             if should_write_prefabs:
                 if floor_count > 0:
-                    file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)  # TODO: update to scale
+                    # if max_height_count > 0:
+                    file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)
+                    # else:
+                    #     file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)
                     if input_str.__contains__("house"):  # TODO: generalize: check for existing prefabs
                         file_utils.write_prefab_to_file("prefabs/prefab_house_1.vmf", out_file)
         with open(out_file, 'a') as fout:
@@ -374,6 +388,9 @@ if __name__ == "__main__":
 
     enable_prefabs_button = ttk.Checkbutton(dev_settings)
     enable_prefabs_button.grid(column=1, row=3, sticky=tk.W, padx=default_padding, pady=default_padding)
+
+    # pos_rating_button = ttk.Button(dev_settings, text="Good result? ️", command=lambda: training.store_as_good(bg_load_last_prompt)) # puts "good" map in training data
+    # pos_rating_button.grid(column=2, row=2, sticky=tk.W, padx=default_padding, pady=default_padding)
 
     training_button = ttk.Button(dev_settings, text="TRAIN MODEL", command=training.train)
     training_button.grid(column=2, row=3, sticky=tk.W, padx=default_padding, pady=default_padding)
