@@ -1,4 +1,6 @@
-import capstone
+import math
+import numpy as np
+
 
 class Primitive:
     def __init__(self, prim_type, loc_x, loc_y, loc_z, size_x, size_y, size_z, id, floor_texture, wall_texture):
@@ -117,14 +119,15 @@ class Prop:
         with open(out_file, 'a') as fout:
             fout.write("entity\n")
             fout.write("{\n")
-            fout.write("\t" + r'"id" "' + str(int(self.loc_x)) + '"' + "\n")
+            fout.write("\t" + r'"id" "' + str(int(math.floor(self.loc_x))) + '"' + "\n")
             if self.is_static:
                 fout.write("\t" + r'"classname" "prop_static"' + "\n")
             if self.is_physics:
                 fout.write("\t" + r'"classname" "prop_physics"' + "\n")
             if self.is_dynamic:
                 fout.write("\t" + r'"classname" "prop_dynamic"' + "\n")
-            boilerplate_list = [r'"angles" "0 0 0"', r'"disableselfshadowing" "0"', r'"disableshadows" "0"',
+            rot = np.random.choice([0,90,180])
+            boilerplate_list = [r'"angles" "0 {} 0"'.format(rot), r'"disableselfshadowing" "0"', r'"disableshadows" "0"',
                                 r'"disablevertexlighting" "0"',
                                 r'"fademaxdist" "0"', r'"fademindist" "-1"', r'"fadescale" "1"',
                                 r'"generatelightmaps" "0"', r'"ignorenormals" "0"',
