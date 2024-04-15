@@ -56,14 +56,7 @@ def train_prop_statistics(input_word):
         items.append(item)
         weights.append(prop_probabilities[item])
 
-    # print(items)
-    # print(weights)
-    #
-    # for prop in prop_locations_dict:
-    #     print(prop)
-    #     print(prop_locations_dict[prop])
-
-    print(random.choices(population=items, weights=weights, k=10))  # shows a random sampling from the distribution
+    # print(random.choices(population=items, weights=weights, k=10))  # shows a random sampling from the distribution
 
     prop_avg_count = math.floor(total_props / total_maps)
 
@@ -86,7 +79,7 @@ def train_prop_statistics(input_word):
         fout2.write("}\n")
 
 
-def load_props(input_word, prop_x, prop_y, map_input): # TODO: add x y z
+def load_props(input_word, prop_x, prop_y):
     list_of_props = []
     with open(loc_association_training_filename, 'r') as loc_in:
         loc_data = loc_in.readlines()
@@ -99,11 +92,7 @@ def load_props(input_word, prop_x, prop_y, map_input): # TODO: add x y z
                 prop_and_locations = line.split(":")
                 locations = prop_and_locations[-1].strip().split(",")
                 prop_name = prop_and_locations[0]
-                print(locations)
-                print(prop_and_locations)
                 props_loc_dict[prop_name] = locations
-                # props_list.pop()
-                # probs_list.pop()
             if line.startswith("}"):
                 word = loc_data[i - 1].split(":")[0].strip()
                 print("WORD:", word)
@@ -121,11 +110,8 @@ def load_props(input_word, prop_x, prop_y, map_input): # TODO: add x y z
                 continue
             if line.__contains__(":"):
                 word_and_prob = line.split(":")
-                # print(word_and_prob)
                 props_list.append(word_and_prob[0])
                 probs_list.append(float(word_and_prob[-1].strip()))
-                # props_list.pop()
-                # probs_list.pop()
             if line.startswith("}"):
                 word = data[i - 1].split(":")[0].strip()
                 print("WORD:", word)
@@ -139,23 +125,22 @@ def load_props(input_word, prop_x, prop_y, map_input): # TODO: add x y z
                         location = rng.choice(props_loc_dict[item][:-1], 1, replace=False)
                         new_loc_data = location[0].split(' ')
                         if new_loc_data in used_locations:
-                            coords = rng.integers(0, 4096, 2, "int", True)
+                            coords = rng.integers(0, 256, 2, "int", True)
                             new_loc_data = [coords[0] + prop_x, coords[1] + prop_y, 22]
                         x = float(new_loc_data[0]) + prop_x
                         y = float(new_loc_data[1]) + prop_y
                         z = float(new_loc_data[2])
 
-                        print(location)
                         prop = geometry.Prop(x, y, z, True, False, False, item)
                         list_of_props.append(prop)
                         used_locations.append(new_loc_data)
-                    # print(props_list[:-1])
-                    # print(probs_list[:-1])
                     break
                 else:
                     continue
-    print("LIST LEN:",len(list_of_props))
+    print("LIST LEN:", len(list_of_props))
     return list_of_props
+
+
 def train():
     # iterate steps from stackoverflow
     training_folders = [x[0] for x in os.walk("training")]
@@ -166,7 +151,3 @@ def train():
     for folder_index in range(1, len(training_folders)):
         folder = training_folders[folder_index]
         train_prop_statistics(folder)
-
-    # load_props("room")
-
-#train()
