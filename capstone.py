@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from enum import Enum
 from functools import partial
@@ -102,19 +101,6 @@ generate_column = 5
 file_column = 6
 
 if __name__ == "__main__":
-    prop_path = "prop_sample_data.txt"
-
-    # load_props(prop_path)
-
-    # table_relation = Relation(("table", "desk", "stand"), 0.8, "props_c17\\furnituretable003a.mdl")
-    # table_relation.save_relation()
-
-    # table_relation.print_string()
-
-    input_word_dict = {'chair': 'models/props_c17/furniturechair001a.mdl',
-                       'table': 'models/props_c17/furnituretable001a.mdl'}
-    # TODO: link with relation
-
     window = tk.Tk()
     window.title("Capstone")
     window.geometry("960x640")
@@ -201,14 +187,11 @@ if __name__ == "__main__":
         map_grid.append(row)
 
 
-    def update_tile_value(i, j):  # using numbers as booleans later ("truthy" values in python), kind of hacky
-        print(map_grid)
-        if map_grid[i][
-            j] == 5:  # 1 = floor, 2 = grid tile height, 3 = 2*grid tile height, 4 = 3*grid tile height, 5=4*grid_tile_height
+    def update_tile_value(i, j):
+        if map_grid[i][j] == 5:  # 1 = floor, 2 = grid tile height, 3 = 2*grid tile height, 4 = 3*grid tile height, 5=4*grid_tile_height
             map_grid[i][j] = 0
         else:
             map_grid[i][j] += 1
-        print(map_grid[i][j])
 
 
     def generate():
@@ -248,7 +231,7 @@ if __name__ == "__main__":
             input_text.insert(0, string=rand_prompt)
         input_str = input_text.get().lower()
 
-        print(input_str)
+
         with open("prompt_log.txt", 'a') as promptlog:
             promptlog.write(input_str + "\n")
 
@@ -277,13 +260,6 @@ if __name__ == "__main__":
             fout.write("world\n{\n")
             fout.close()
 
-        # TODO: generalize this (for word in db, if input_str contains word: prop_name_prob? )
-        # prop_name = ""
-        # if input_str.__contains__("table"):
-        #     prop_name = input_word_dict["table"]
-        # if input_str.__contains__("chair"):
-        #     prop_name = input_word_dict["chair"]
-
         prop_list = []
         geometry_list = []
         floor_count = 0
@@ -301,9 +277,9 @@ if __name__ == "__main__":
                                 MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
                         prop_y = (((j + i * (uniform(0, temperature_val)) / 10) * map_grid_tile_size) - (
                                 MAX_SUPPORTED_SIZE / 2) + (map_grid_tile_size / 2))
-                        for item in language_processing.process_prompt(input_str, prop_x, prop_y, out_file):
-                            print("SELECTED:", item.name)
+                        for item in language_processing.process_prompt(input_str, prop_x, prop_y):
                             prop_list.append(item)
+                        language_processing.process_prompt_for_prefabs(input_str, prop_x, prop_y, out_file)
                     else:
                         height = (map_grid[i][j] - 1) * (map_grid_tile_size / 2)
                     user_defined_primitive = geometry.Primitive("BLOCK",
