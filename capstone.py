@@ -71,13 +71,14 @@ class ImageButton(ttk.Button):
             if self.toggleState == 5:
                 self.config(image=self.height5Image)
 
+
 def bg_load_last_prompt():
-        with open('prompt_log.txt', 'r') as fin:
-            file_data = fin.readlines()
-            if len(file_data) > 0:
-                last_prompt = file_data[-1]
-                if not last_prompt == "":
-                    return last_prompt
+    with open('prompt_log.txt', 'r') as fin:
+        file_data = fin.readlines()
+        if len(file_data) > 0:
+            last_prompt = file_data[-1]
+            if not last_prompt == "":
+                return last_prompt
 
 
 def load_last_prompt():
@@ -322,12 +323,10 @@ if __name__ == "__main__":
         if enable_prefabs_button.instate(['selected']) or enable_prefabs_button.instate(['alternate']):
             if should_write_prefabs:
                 if floor_count > 0:
-                    # if max_height_count > 0:
-                    file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)
-                    # else:
-                    #     file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)
-                    if input_str.__contains__("house"):  # TODO: generalize: check for existing prefabs
-                        file_utils.write_prefab_to_file("prefabs/prefab_house_1.vmf", out_file)
+                    if max_height_count > 0:
+                        file_utils.write_prefab_to_file("prefabs/xl_skybox.vmf", out_file)
+                    else:
+                        file_utils.write_prefab_to_file("prefabs/big_skybox.vmf", out_file)
         with open(out_file, 'a') as fout:
             fout.write("}")
         if enable_props_button.instate(['selected']) or enable_props_button.instate(['alternate']):
