@@ -33,3 +33,7 @@ The current demo build has a folder with "city", "kitchen", "room", and "tree" i
 
 The maps folder is where your generated maps will be output.
 The prefabs folder stores geometry that isn't for training and isn't a full map - for instance, the two sizes of skybox.
+
+## Viewing maps
+
+To view your maps you will need Hammer++ installed at "C:\Program Files (x86)\Steam\steamapps\common\Source SDK Base 2013 Multiplayer\bin\hammerplusplus.exe"
